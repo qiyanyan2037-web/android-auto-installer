@@ -1,0 +1,25 @@
+# Build output
+*.exe
+*.pdb
+*.obj
+bin/
+obj/
+
+# Android platform-tools binaries
+adb.exe
+AdbWinApi.dll
+AdbWinUsbApi.dll
+
+# User packages and logs
+*.apk
+*.zip
+*.log
+apk_install_*.log
+
+# Local runtime/config/temp files
+*.tmp
+*.bak
+*.user
+.vs/
+desktop.ini
+
