@@ -117,7 +117,7 @@ namespace DoododAutoInstaller
 
         private void LoadAppIcon()
         {
-            string iconPath = Path.Combine(AppPaths.AppDirectory, "app_icon.ico");
+            string iconPath = AppPaths.FindAsset("app_icon.ico");
             if (!File.Exists(iconPath)) return;
 
             try
@@ -176,7 +176,7 @@ namespace DoododAutoInstaller
 
         private void LoadBackgroundImage()
         {
-            string imagePath = Path.Combine(AppPaths.AppDirectory, "background.png");
+            string imagePath = AppPaths.FindAsset("background.png");
             if (!File.Exists(imagePath)) return;
 
             using (var source = Image.FromFile(imagePath))
@@ -2147,6 +2147,14 @@ namespace DoododAutoInstaller
             {
                 return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             }
+        }
+
+        public static string FindAsset(string fileName)
+        {
+            string local = Path.Combine(AppDirectory, fileName);
+            if (File.Exists(local)) return local;
+
+            return Path.Combine(AppDirectory, "构建", fileName);
         }
     }
 

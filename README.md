@@ -2,133 +2,100 @@
 
 一个用于 Android APK 安装和文件传输流程的 Windows 图形界面小工具。
 
-## 下载和使用
+本工具和文档均由 GPT-5.5 开发。
 
-如果只想直接使用，不需要下载源码或自己构建：
+## 一、直接使用 `自动安装.exe`
 
-1. 下载仓库里的 [`自动安装.exe`](./自动安装.exe)。
-2. 准备 Android SDK Platform-Tools，确保电脑能找到 `adb.exe`。程序会按下面顺序查找 ADB：
-   - `自动安装.exe` 同目录下的 `adb.exe`；
-   - `C:\app\platform-tools\adb.exe`；
-   - 系统 `PATH` 里的 `adb.exe`。
-3. 手机开启 USB 调试，并在手机上允许这台电脑调试。
-4. 双击运行 `自动安装.exe`，选择 APK、文件或文件夹后按界面提示操作。
+这个方式适合只想下载后直接运行的用户，不需要下载源码，也不需要自己构建。
 
-说明：仓库只提供 `自动安装.exe`，不包含 `adb.exe`、`AdbWinApi.dll` 和 `AdbWinUsbApi.dll`。请自行从 Google 官方 Android SDK Platform-Tools 获取 ADB 环境。
+### 下载
 
-## 功能
+1. 打开本仓库首页。
+2. 点击根目录里的 [`自动安装.exe`](./自动安装.exe)。
+3. 在 GitHub 文件页面中点击下载按钮，或点击 `View raw` / `Download raw file` 下载。
+4. 下载完成后，把 `自动安装.exe` 放到你想运行的位置。
+
+### 使用前准备
+
+本仓库只提供 `自动安装.exe`，不包含 ADB 文件。请自行准备 Android SDK Platform-Tools。
+
+程序会按下面顺序查找 `adb.exe`：
+
+1. `自动安装.exe` 同目录下的 `adb.exe`
+2. `C:\app\platform-tools\adb.exe`
+3. 系统 `PATH` 里的 `adb.exe`
+
+你可以任选一种方式配置 ADB。常见做法是安装 Android SDK Platform-Tools，然后把 platform-tools 目录加入系统 `PATH`。
+
+### 使用步骤
+
+1. 手机开启 USB 调试。
+2. 用数据线连接手机和电脑。
+3. 手机弹出调试授权时，选择允许这台电脑调试。
+4. 双击运行 `自动安装.exe`。
+5. 在工具里选择 APK、文件或文件夹，然后按界面提示安装、复制或导出文件。
+
+## 二、使用 `构建` 文件夹自行构建
+
+这个方式适合想查看源码、修改程序，或自己重新生成 `自动安装.exe` 的用户。
+
+### 下载
+
+1. 打开本仓库首页。
+2. 点击绿色 `Code` 按钮。
+3. 选择 `Download ZIP` 下载整个项目，或使用 git clone 克隆仓库。
+4. 解压后可以看到根目录下的 `构建` 文件夹。
+
+`构建` 文件夹包含：
+
+- `AutoInstaller.cs`：主程序源码
+- `build.ps1`：构建脚本
+- `app_icon.ico`：程序图标
+- `app_icon.png`：图标源图
+- `background.png`：界面背景图
+
+### 构建要求
+
+- Windows
+- .NET Framework 4.x
+- Windows 自带的 .NET Framework C# 编译器
+
+构建脚本默认使用：
+
+```text
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
+```
+
+### 构建步骤
+
+在项目根目录打开 PowerShell，运行：
+
+```powershell
+.\构建\build.ps1
+```
+
+构建完成后，会在项目根目录生成或更新：
+
+```text
+自动安装.exe
+```
+
+重新构建只会生成工具本体，不会生成或附带 `adb.exe`、`AdbWinApi.dll`、`AdbWinUsbApi.dll`。运行工具时仍然需要按上面的说明自行准备 ADB 环境。
+
+## 功能概览
 
 - 通过 ADB 检测已连接的 Android 设备。
 - 读取 APK 的包名、versionCode 和 versionName。
-- 智能处理 APK：
-  - 设备未安装该应用时自动安装；
-  - APK versionCode 更高时自动升级；
-  - 已安装版本相同或更新时，将 APK 复制到指定目录。
+- 根据设备已安装版本智能选择安装、升级或复制 APK。
 - 支持选择单个文件、多个文件或整个文件夹。
-- 支持将非 APK 文件复制到指定的 Android 目录。
+- 支持将非 APK 文件复制到指定 Android 目录。
 - 支持通过 ADB 浏览 Android 文件夹和文件。
 - 支持将 Android 文件或文件夹导出到电脑。
 - 自动记住上次使用的本地源目录、Android 目标目录和导出目录。
 
-## 运行要求
-
-- Windows
-- .NET Framework 4.x
-- Android 已开启 USB 调试
-- Android SDK Platform-Tools
-
-本仓库不包含 Google 的 platform-tools 二进制文件。请从 Google 官方下载，并将以下文件放到生成的可执行文件旁边：
-
-- `adb.exe`
-- `AdbWinApi.dll`
-- `AdbWinUsbApi.dll`
-
-## 构建
-
-在当前文件夹中运行 PowerShell：
-
-```powershell
-.\build.ps1
-```
-
-构建脚本会使用 Windows .NET Framework 的 C# 编译器：
-
-```text
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
-```
-
 ## 说明
 
-- 当前仓库单独提供 `自动安装.exe`，方便直接下载使用。
-- 重新构建产生的其它 `.exe` 文件默认被 git 忽略。
-- APK/ZIP 安装包和日志文件已被 git 忽略。
-- APK 版本检测和安装仍然依赖 ADB。
-
----
-
-# Android Auto Installer
-
-A small Windows GUI tool for Android APK installation and file transfer workflows.
-
-## Download and Use
-
-If you only want to run the tool, you do not need to download the source code or build it yourself:
-
-1. Download [`自动安装.exe`](./自动安装.exe) from this repository.
-2. Prepare Android SDK Platform-Tools and make sure the computer can find `adb.exe`. The app searches for ADB in this order:
-   - `adb.exe` next to `自动安装.exe`;
-   - `C:\app\platform-tools\adb.exe`;
-   - `adb.exe` from the system `PATH`.
-3. Enable USB debugging on the phone, then allow this computer when prompted on the phone.
-4. Double-click `自动安装.exe`, select APKs, files, or folders, and follow the UI.
-
-Note: this repository only provides `自动安装.exe`. It does not include `adb.exe`, `AdbWinApi.dll`, or `AdbWinUsbApi.dll`. Please get ADB from Google's official Android SDK Platform-Tools.
-
-## Features
-
-- Detects connected Android devices through ADB.
-- Reads APK package name, versionCode, and versionName.
-- Smart APK handling:
-  - install when the app is not installed;
-  - upgrade when the APK versionCode is higher;
-  - copy the APK when the installed version is the same or newer.
-- Supports selecting one file, multiple files, or a whole folder.
-- Copies non-APK files to a selected Android directory.
-- Lets you browse Android folders/files through ADB.
-- Supports exporting Android files/folders to the PC.
-- Remembers the last local source folder, Android target folder, and export folder.
-
-## Requirements
-
-- Windows
-- .NET Framework 4.x
-- Android USB debugging enabled
-- Android SDK Platform-Tools
-
-This repository does not include Google's platform-tools binaries. Download them from Google and place these files next to the built executable:
-
-- `adb.exe`
-- `AdbWinApi.dll`
-- `AdbWinUsbApi.dll`
-
-## Build
-
-Run PowerShell in this folder:
-
-```powershell
-.\build.ps1
-```
-
-The build script uses the Windows .NET Framework C# compiler:
-
-```text
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
-```
-
-## Notes
-
-- This repository provides `自动安装.exe` as a direct download.
-- Other rebuilt `.exe` files are ignored by git by default.
-- APK/ZIP packages and logs are ignored by git.
-- ADB is still used for APK version detection and installation.
-
+- 根目录的 `自动安装.exe` 是给普通用户直接下载使用的版本。
+- `构建` 文件夹是给开发者或需要自行构建的用户使用的版本。
+- APK/ZIP 安装包和日志文件不会上传到仓库。
+- ADB 版本检测、APK 安装、文件复制和导出都依赖 ADB。

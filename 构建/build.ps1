@@ -1,10 +1,12 @@
 $ErrorActionPreference = "Stop"
 
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RootDir = Split-Path -Parent $ProjectDir
 $Csc = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 $Source = Join-Path $ProjectDir "AutoInstaller.cs"
 $Icon = Join-Path $ProjectDir "app_icon.ico"
-$Output = Join-Path $ProjectDir "自动安装.exe"
+$OutputName = [string]::Concat([char]0x81EA, [char]0x52A8, [char]0x5B89, [char]0x88C5, ".exe")
+$Output = Join-Path $RootDir $OutputName
 
 if (-not (Test-Path -LiteralPath $Csc)) {
     throw "C# compiler not found: $Csc"
