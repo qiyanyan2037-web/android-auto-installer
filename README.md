@@ -2,6 +2,20 @@
 
 一个用于 Android APK 安装和文件传输流程的 Windows 图形界面小工具。
 
+## 下载和使用
+
+如果只想直接使用，不需要下载源码或自己构建：
+
+1. 下载仓库里的 [`自动安装.exe`](./自动安装.exe)。
+2. 准备 Android SDK Platform-Tools，确保电脑能找到 `adb.exe`。程序会按下面顺序查找 ADB：
+   - `自动安装.exe` 同目录下的 `adb.exe`；
+   - `C:\app\platform-tools\adb.exe`；
+   - 系统 `PATH` 里的 `adb.exe`。
+3. 手机开启 USB 调试，并在手机上允许这台电脑调试。
+4. 双击运行 `自动安装.exe`，选择 APK、文件或文件夹后按界面提示操作。
+
+说明：仓库只提供 `自动安装.exe`，不包含 `adb.exe`、`AdbWinApi.dll` 和 `AdbWinUsbApi.dll`。请自行从 Google 官方 Android SDK Platform-Tools 获取 ADB 环境。
+
 ## 功能
 
 - 通过 ADB 检测已连接的 Android 设备。
@@ -45,7 +59,8 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 
 ## 说明
 
-- 生成的 `自动安装.exe` 已被 git 忽略。
+- 当前仓库单独提供 `自动安装.exe`，方便直接下载使用。
+- 重新构建产生的其它 `.exe` 文件默认被 git 忽略。
 - APK/ZIP 安装包和日志文件已被 git 忽略。
 - APK 版本检测和安装仍然依赖 ADB。
 
@@ -54,6 +69,20 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 # Android Auto Installer
 
 A small Windows GUI tool for Android APK installation and file transfer workflows.
+
+## Download and Use
+
+If you only want to run the tool, you do not need to download the source code or build it yourself:
+
+1. Download [`自动安装.exe`](./自动安装.exe) from this repository.
+2. Prepare Android SDK Platform-Tools and make sure the computer can find `adb.exe`. The app searches for ADB in this order:
+   - `adb.exe` next to `自动安装.exe`;
+   - `C:\app\platform-tools\adb.exe`;
+   - `adb.exe` from the system `PATH`.
+3. Enable USB debugging on the phone, then allow this computer when prompted on the phone.
+4. Double-click `自动安装.exe`, select APKs, files, or folders, and follow the UI.
+
+Note: this repository only provides `自动安装.exe`. It does not include `adb.exe`, `AdbWinApi.dll`, or `AdbWinUsbApi.dll`. Please get ADB from Google's official Android SDK Platform-Tools.
 
 ## Features
 
@@ -98,7 +127,8 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 
 ## Notes
 
-- The generated `自动安装.exe` is ignored by git.
+- This repository provides `自动安装.exe` as a direct download.
+- Other rebuilt `.exe` files are ignored by git by default.
 - APK/ZIP packages and logs are ignored by git.
 - ADB is still used for APK version detection and installation.
 
