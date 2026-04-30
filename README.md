@@ -4,6 +4,15 @@
 
 本工具和文档均由 GPT-5.5 开发。
 
+## 最新更新（2026-04-30）
+
+- 新增“解锁 BL”功能：自动执行 `adb reboot bootloader` 和 `fastboot flashing unlock`，并在操作前提示解锁会清空手机数据。
+- 新增“刷入修补 boot”功能：选择修补好的 `.img` 文件后，自动进入 fastboot、刷入 boot 分区并重启手机。
+- 新增 `fastboot.exe` 自动查找：优先查找程序同目录，其次查找 `C:\app\platform-tools\fastboot.exe`，最后查找系统 `PATH`。
+- 优化日志框颜色：成功信息显示绿色，错误/失败显示红色，警告提示显示橙色，操作流程显示蓝色，方便快速判断执行状态。
+
+> 注意：解锁 BL 会清空手机数据；刷入错误的 boot 镜像可能导致手机无法正常启动。请确认已备份数据，并使用当前机型、当前系统版本对应的 boot 镜像。
+
 ## 一、直接使用 `自动安装.exe`
 
 这个方式适合只想下载后直接运行的用户，不需要下载源码，也不需要自己构建。
@@ -26,6 +35,12 @@
 3. 系统 `PATH` 里的 `adb.exe`
 
 你可以任选一种方式配置 ADB。常见做法是安装 Android SDK Platform-Tools，然后把 platform-tools 目录加入系统 `PATH`。
+
+如需使用“解锁 BL”或“刷入修补 boot”功能，还需要准备 `fastboot.exe`。程序会按下面顺序查找：
+
+1. `自动安装.exe` 同目录下的 `fastboot.exe`
+2. `C:\app\platform-tools\fastboot.exe`
+3. 系统 `PATH` 里的 `fastboot.exe`
 
 ### 使用步骤
 
@@ -91,6 +106,9 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 - 支持将非 APK 文件复制到指定 Android 目录。
 - 支持通过 ADB 浏览 Android 文件夹和文件。
 - 支持将 Android 文件或文件夹导出到电脑。
+- 支持一键进入 fastboot 并执行 BL 解锁流程。
+- 支持选择修补后的 boot 镜像并刷入 boot 分区。
+- 支持按日志类型显示不同颜色，区分成功、错误、警告和操作流程。
 - 自动记住上次使用的本地源目录、Android 目标目录和导出目录。
 
 ## 说明
@@ -98,4 +116,4 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 - 根目录的 `自动安装.exe` 是给普通用户直接下载使用的版本。
 - `构建` 文件夹是给开发者或需要自行构建的用户使用的版本。
 - APK/ZIP 安装包和日志文件不会上传到仓库。
-- ADB 版本检测、APK 安装、文件复制和导出都依赖 ADB。
+- ADB 版本检测、APK 安装、文件复制和导出都依赖 ADB；BL 解锁和刷入 boot 依赖 fastboot。

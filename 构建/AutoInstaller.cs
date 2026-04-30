@@ -61,6 +61,8 @@ namespace DoododAutoInstaller
         private readonly Button scanButton = new Button();
         private readonly Button startButton = new Button();
         private readonly Button createFolderButton = new Button();
+        private readonly Button unlockBootloaderButton = new Button();
+        private readonly Button rootBootButton = new Button();
         private readonly LightweightPackageGrid grid = new LightweightPackageGrid();
         private readonly TranslucentLogView logBox = new TranslucentLogView();
         private readonly Label deviceLabel = new Label();
@@ -73,6 +75,7 @@ namespace DoododAutoInstaller
         private Image backgroundImage;
         private Bitmap backgroundCanvas;
         private string adbPath;
+        private string fastbootPath;
         private bool busy;
         private bool liveResizing;
         private bool backgroundCanvasDirty = true;
@@ -103,6 +106,7 @@ namespace DoododAutoInstaller
             DoubleBuffered = true;
 
             adbPath = Adb.FindAdb();
+            fastbootPath = Adb.FindFastboot();
             LoadAppIcon();
             LoadBackgroundImage();
 
@@ -112,6 +116,7 @@ namespace DoododAutoInstaller
             grid.Items = items;
             Log("工具已启动。");
             Log(adbPath == null ? "未找到 adb.exe，请先安装 platform-tools 或把 adb.exe 放入 PATH。" : "ADB: " + adbPath);
+            Log(fastbootPath == null ? "未找到 fastboot.exe，解锁 BL 和刷 boot 功能需要 fastboot。" : "Fastboot: " + fastbootPath);
             UpdateDeviceStatus(false);
         }
 
@@ -308,9 +313,10 @@ namespace DoododAutoInstaller
             var root = new TableLayoutPanel();
             root.Dock = DockStyle.Fill;
             root.BackColor = Color.Transparent;
-            root.RowCount = 5;
+            root.RowCount = 6;
             root.ColumnCount = 1;
             root.Padding = new Padding(10);
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
@@ -397,13 +403,42 @@ namespace DoododAutoInstaller
             apkSmartInstallCheckBox.CheckedChanged += delegate { if (!busy) ScanButtonClick(null, EventArgs.Empty); };
             remote.Controls.Add(apkSmartInstallCheckBox, 2, 0);
 
+            var deviceTools = new TableLayoutPanel();
+            deviceTools.Dock = DockStyle.Fill;
+            deviceTools.BackColor = Color.Transparent;
+            deviceTools.ColumnCount = 3;
+            deviceTools.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            deviceTools.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112));
+            deviceTools.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128));
+            root.Controls.Add(deviceTools, 0, 2);
+
+            var deviceToolsLabel = new Label();
+            deviceToolsLabel.Dock = DockStyle.Fill;
+            deviceToolsLabel.BackColor = Color.Transparent;
+            deviceToolsLabel.ForeColor = Color.FromArgb(70, 70, 70);
+            deviceToolsLabel.TextAlign = ContentAlignment.MiddleLeft;
+            deviceToolsLabel.Text = "高级设备功能";
+            deviceTools.Controls.Add(deviceToolsLabel, 0, 0);
+
+            unlockBootloaderButton.Text = "解锁 BL";
+            unlockBootloaderButton.Dock = DockStyle.Fill;
+            unlockBootloaderButton.Margin = new Padding(0, 4, 8, 4);
+            unlockBootloaderButton.Click += UnlockBootloaderButtonClick;
+            deviceTools.Controls.Add(unlockBootloaderButton, 1, 0);
+
+            rootBootButton.Text = "刷入修补 boot";
+            rootBootButton.Dock = DockStyle.Fill;
+            rootBootButton.Margin = new Padding(0, 4, 0, 4);
+            rootBootButton.Click += RootBootButtonClick;
+            deviceTools.Controls.Add(rootBootButton, 2, 0);
+
             var status = new TableLayoutPanel();
             status.Dock = DockStyle.Fill;
             status.BackColor = Color.Transparent;
             status.ColumnCount = 2;
             status.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 46));
             status.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 54));
-            root.Controls.Add(status, 0, 2);
+            root.Controls.Add(status, 0, 3);
 
             deviceLabel.Dock = DockStyle.Fill;
             deviceLabel.BackColor = Color.Transparent;
@@ -419,14 +454,14 @@ namespace DoododAutoInstaller
             grid.Dock = DockStyle.Fill;
             grid.HostForm = this;
             grid.ThemeImage = backgroundImage;
-            root.Controls.Add(grid, 0, 3);
+            root.Controls.Add(grid, 0, 4);
 
             logBox.Dock = DockStyle.Fill;
             logBox.HostForm = this;
             logBox.ThemeImage = backgroundImage;
             logBox.ForeColor = Color.FromArgb(230, 235, 241);
             logBox.Font = new Font("Consolas", 9F);
-            root.Controls.Add(logBox, 0, 4);
+            root.Controls.Add(logBox, 0, 5);
         }
 
         private void BrowseButtonClick(object sender, EventArgs e)
@@ -557,6 +592,57 @@ namespace DoododAutoInstaller
             }
         }
 
+        private void UnlockBootloaderButtonClick(object sender, EventArgs e)
+        {
+            if (busy) return;
+
+            DialogResult confirm = MessageBox.Show(
+                this,
+                "解锁 BL 会清空手机数据，并且需要你在手机 fastboot 界面用音量键选择 UNLOCK THE BOOTLOADER、再按电源键确认。\r\n\r\n请确认已经备份数据、开启 OEM 解锁和 USB 调试。是否继续？",
+                "解锁 BL",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
+
+            if (confirm != DialogResult.Yes) return;
+
+            RunWorker("解锁 BL", delegate
+            {
+                ExecuteUnlockBootloader();
+            });
+        }
+
+        private void RootBootButtonClick(object sender, EventArgs e)
+        {
+            if (busy) return;
+
+            string bootImagePath;
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Title = "选择修补好的 boot 镜像";
+                dialog.Filter = "Boot 镜像 (*.img)|*.img|所有文件 (*.*)|*.*";
+                dialog.Multiselect = false;
+                dialog.InitialDirectory = GetInitialSourceDirectory();
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                bootImagePath = dialog.FileName;
+            }
+
+            DialogResult confirm = MessageBox.Show(
+                this,
+                "即将进入 fastboot 并刷入:\r\n" + bootImagePath + "\r\n\r\n请确认这是当前机型和当前系统版本对应的修补 boot 镜像。刷错 boot 可能导致无法启动。是否继续？",
+                "刷入修补 boot",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
+
+            if (confirm != DialogResult.Yes) return;
+
+            RunWorker("刷入修补 boot", delegate
+            {
+                ExecutePatchedBoot(bootImagePath);
+            });
+        }
+
         private void RunWorker(string title, Action action)
         {
             if (busy) return;
@@ -593,6 +679,8 @@ namespace DoododAutoInstaller
             scanButton.Enabled = enabled;
             startButton.Enabled = enabled;
             createFolderButton.Enabled = enabled;
+            unlockBootloaderButton.Enabled = enabled;
+            rootBootButton.Enabled = enabled;
             folderTextBox.Enabled = enabled;
             remotePathBox.Enabled = enabled;
             apkSmartInstallCheckBox.Enabled = enabled;
@@ -627,6 +715,116 @@ namespace DoododAutoInstaller
 
             UpdateDeviceStatus(true);
             Log("[OK] 设备已连接: " + string.Join(", ", devices.ToArray()));
+        }
+
+        private string CheckFastbootOrThrow()
+        {
+            if (fastbootPath == null)
+            {
+                fastbootPath = Adb.FindFastboot();
+            }
+
+            if (fastbootPath == null)
+            {
+                throw new InvalidOperationException("未找到 fastboot.exe。请把 fastboot.exe 放到程序同目录，或安装 platform-tools 并加入 PATH。");
+            }
+
+            return fastbootPath;
+        }
+
+        private void ExecuteUnlockBootloader()
+        {
+            CheckDeviceOrThrow();
+            string fastboot = CheckFastbootOrThrow();
+
+            Log("进入 fastboot: adb reboot bootloader");
+            ProcessResult reboot = Adb.Run(adbPath, "reboot bootloader", 30000);
+            if (reboot.ExitCode != 0)
+            {
+                throw new InvalidOperationException(reboot.AllOutput.Trim());
+            }
+
+            WaitForFastbootDevice(fastboot);
+
+            Log("执行解锁: fastboot flashing unlock");
+            Log("手机出现确认界面时，请选择 UNLOCK THE BOOTLOADER，并按电源键确认。");
+            ProcessResult unlock = Adb.Run(fastboot, "flashing unlock", 120000);
+            Log(unlock.AllOutput.Trim());
+            if (unlock.ExitCode != 0)
+            {
+                throw new InvalidOperationException("解锁命令执行失败: " + unlock.AllOutput.Trim());
+            }
+
+            Log("[OK] 解锁命令已发送。手机会清空数据并重启，或停留在确认界面等待你操作。");
+        }
+
+        private void ExecutePatchedBoot(string bootImagePath)
+        {
+            if (string.IsNullOrWhiteSpace(bootImagePath) || !File.Exists(bootImagePath))
+            {
+                throw new FileNotFoundException("未找到 boot 镜像: " + bootImagePath);
+            }
+
+            CheckDeviceOrThrow();
+            string fastboot = CheckFastbootOrThrow();
+
+            Log("进入 fastboot: adb reboot bootloader");
+            ProcessResult reboot = Adb.Run(adbPath, "reboot bootloader", 30000);
+            if (reboot.ExitCode != 0)
+            {
+                throw new InvalidOperationException(reboot.AllOutput.Trim());
+            }
+
+            WaitForFastbootDevice(fastboot);
+
+            Log("刷入 boot: " + bootImagePath);
+            ProcessResult flash = Adb.Run(fastboot, "flash boot " + Adb.Quote(bootImagePath), 180000);
+            Log(flash.AllOutput.Trim());
+            if (flash.ExitCode != 0)
+            {
+                throw new InvalidOperationException("刷入 boot 失败: " + flash.AllOutput.Trim());
+            }
+
+            Log("重启手机: fastboot reboot");
+            ProcessResult rebootSystem = Adb.Run(fastboot, "reboot", 30000);
+            Log(rebootSystem.AllOutput.Trim());
+            if (rebootSystem.ExitCode != 0)
+            {
+                throw new InvalidOperationException("fastboot reboot 失败: " + rebootSystem.AllOutput.Trim());
+            }
+
+            Log("[OK] 修补 boot 已刷入，手机正在重启。");
+        }
+
+        private void WaitForFastbootDevice(string fastboot)
+        {
+            DateTime deadline = DateTime.Now.AddSeconds(90);
+            Log("等待 fastboot 设备连接...");
+
+            while (DateTime.Now < deadline)
+            {
+                ProcessResult result = Adb.Run(fastboot, "devices", 10000);
+                if (result.ExitCode == 0)
+                {
+                    using (var reader = new StringReader(result.Stdout))
+                    {
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            line = line.Trim();
+                            if (Regex.IsMatch(line, @"\sfastboot$", RegexOptions.IgnoreCase))
+                            {
+                                Log("[OK] Fastboot 设备已连接: " + Regex.Split(line, @"\s+")[0]);
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                Thread.Sleep(2000);
+            }
+
+            throw new TimeoutException("等待 fastboot 设备超时。请确认手机已进入 fastboot，并且驱动正常。");
         }
 
         private void ScanFolder()
@@ -1534,15 +1732,62 @@ namespace DoododAutoInstaller
 
             for (int i = start; i < lines.Count; i++)
             {
+                Color lineColor = GetLineColor(lines[i]);
                 TextRenderer.DrawText(
                     e.Graphics,
                     lines[i],
                     Font,
                     new Rectangle(Padding.Left, y, ClientSize.Width - Padding.Left - Padding.Right, lineHeight),
-                    ForeColor,
+                    lineColor,
                     TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
                 y += lineHeight;
             }
+        }
+
+        private Color GetLineColor(string line)
+        {
+            string text = line ?? "";
+            string upper = text.ToUpperInvariant();
+
+            if (ContainsAny(text, "[错误]", "失败", "异常", "超时", "无法") ||
+                ContainsAny(upper, "FAILED", "FAILURE", "ERROR"))
+            {
+                return Color.FromArgb(255, 128, 128);
+            }
+
+            if (ContainsAny(text, "[OK]", "安装成功", "复制成功", "执行完成", "已连接", "已刷入") ||
+                ContainsAny(upper, "SUCCESS", "OKAY"))
+            {
+                return Color.FromArgb(126, 232, 150);
+            }
+
+            if (ContainsAny(text, "未找到", "请", "等待", "警告", "注意", "确认", "清空数据", "读取失败"))
+            {
+                return Color.FromArgb(255, 205, 120);
+            }
+
+            if (text.IndexOf("====", StringComparison.Ordinal) >= 0 ||
+                ContainsAny(text, "扫描来源", "找到文件", "进入 fastboot", "执行解锁", "刷入 boot", "重启手机", "安装:", "复制:"))
+            {
+                return Color.FromArgb(145, 205, 255);
+            }
+
+            if (ContainsAny(text, "ADB:", "Fastboot:"))
+            {
+                return Color.FromArgb(205, 220, 255);
+            }
+
+            return ForeColor;
+        }
+
+        private static bool ContainsAny(string text, params string[] values)
+        {
+            foreach (string value in values)
+            {
+                if (text.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            }
+
+            return false;
         }
     }
 
@@ -1983,6 +2228,31 @@ namespace DoododAutoInstaller
             if (File.Exists(known)) return known;
 
             var result = Run("where", "adb", 10000);
+            if (result.ExitCode == 0)
+            {
+                using (var reader = new StringReader(result.Stdout))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        line = line.Trim();
+                        if (line.Length > 0 && File.Exists(line)) return line;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public static string FindFastboot()
+        {
+            string local = Path.Combine(AppPaths.AppDirectory, "fastboot.exe");
+            if (File.Exists(local)) return local;
+
+            string known = @"C:\app\platform-tools\fastboot.exe";
+            if (File.Exists(known)) return known;
+
+            var result = Run("where", "fastboot", 10000);
             if (result.ExitCode == 0)
             {
                 using (var reader = new StringReader(result.Stdout))
